@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Word Frequency Filter
+// @name         WaniKani Word Frequency Filter
 // @namespace    wyverex
 // @version      1.0.0
 // @description  Shows word frequency information and reorders vocab on the lesson picker according to their frequency
