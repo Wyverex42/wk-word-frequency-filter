@@ -380,6 +380,7 @@
     const subjectElements = document.querySelectorAll(".subject-character__characters");
     const roots = new Set();
     const cutoff = shared.settings.rankCutoff;
+    let hasWordsBeyondCutoff = false;
     for (let element of subjectElements) {
       const typeParent = element.parentElement.parentElement;
       if (typeParent.classList.contains("subject-character--kanji")) {
@@ -393,17 +394,22 @@
         const rank = getRank(data);
         if (rank !== undefined) {
           root.style.order = rank;
+          hasWordsBeyondCutoff |= rank > cutoff;
         } else {
           root.style.order = numRanksFound ? 100000 : 200000;
+          hasWordsBeyondCutoff = true;
         }
       } else {
         root.style.order = 200000;
+        hasWordsBeyondCutoff = true;
       }
     }
 
-    for (let root of roots) {
-      createDiv(root, "", `width: 100%; order: ${cutoff + 1}`);
-      createDiv(root, "wff-picker-cutoff", `order: ${cutoff + 2}`, "Beyond cutoff");
+    if (hasWordsBeyondCutoff) {
+      for (let root of roots) {
+        createDiv(root, "", `width: 100%; order: ${cutoff + 1}`);
+        createDiv(root, "wff-picker-cutoff", `order: ${cutoff + 2}`, "Beyond cutoff");
+      }
     }
 
     initTooltip("subject-character--vocabulary", pickerTooltip);
