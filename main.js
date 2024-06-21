@@ -383,7 +383,7 @@
     let hasWordsBeyondCutoff = false;
     for (let element of subjectElements) {
       const typeParent = element.parentElement.parentElement;
-      if (typeParent.classList.contains("subject-character--kanji")) {
+      if (!typeParent.classList.contains("subject-character--vocabulary")) {
         continue;
       }
       const root = typeParent.parentElement;
