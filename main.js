@@ -17,10 +17,11 @@
 // ==/UserScript==
 
 (function (global) {
+  const ScriptId = "wk-word-frequency-filter";
+  const ScriptName = "Word Frequency Filter";
+
   if (!window.wkof) {
-    alert(
-      '"Wanikani Word Frequency Filter" script requires Wanikani Open Framework.\nYou will now be forwarded to installation instructions.'
-    );
+    alert(`"${ScripName}" script requires Wanikani Open Framework.\nYou will now be forwarded to installation instructions.`);
     window.location.href = "https://community.wanikani.com/t/instructions-installing-wanikani-open-framework/28549";
     return;
   }
@@ -40,6 +41,7 @@
   const shared = {
     settings: {},
     vocab: {},
+    markedVocab: undefined,
   };
 
   function installCSS() {
@@ -111,33 +113,66 @@
 
   // ====================================================================================
   wkof.include("ItemData,Menu,Settings");
-  wkof.ready("Menu,Settings").then(loadSettings).then(startup).catch(loadError);
+  Promise.resolve().then(startup).catch(loadError);
 
   function loadError(e) {
-    console.error('Failed to load data from WKOF for "Word Frequency Filter"', e);
-  }
-
-  function loadSettings() {
-    let defaults = {
-      rankCutoff: 2500,
-      source: "a",
-    };
-    return wkof.Settings.load("word_frequency_filter", defaults).then(() => (shared.settings = wkof.settings.word_frequency_filter));
+    console.error(`Startup for "${ScriptName}" failed`, e);
   }
 
   function startup() {
     installCSS();
 
+    const promises = [wkof.ready("Menu"), loadDB(), loadSettingsAndMenu()];
+    if (window.location.href.includes("subject-lessons/picker")) {
+      promises.push(wkof.ready("ItemData").then(loadItems));
+    }
+
     const observer = new MutationObserver(() => {
       postNavigate();
     });
-    observer.observe(document.body, { childList: true, subtree: false });
 
-    if (window.location.href.includes("subject-lessons/picker")) {
-      wkof.ready("ItemData").then(loadItems).then(postNavigate);
+    Promise.all(promises)
+      .then(postNavigate)
+      .then(() => {
+        observer.observe(document.body, { childList: true, subtree: false });
+      });
+  }
+
+  function loadDB() {
+    if (wkof.file_cache.dir[ScriptId]) {
+      return wkof.file_cache.load(ScriptId).then((data) => {
+        if (!data) {
+          data = {};
+        }
+        shared.markedVocab = data;
+      });
     } else {
-      postNavigate();
+      shared.markedVocab = {};
+      return Promise.resolve();
     }
+  }
+
+  function loadSettingsAndMenu() {
+    let defaults = {
+      rankCutoff: 2500,
+      source: "a",
+    };
+    return wkof
+      .ready("Menu,Settings")
+      .then(() => {
+        return wkof.Settings.load(ScriptId, defaults);
+      })
+      .then(() => {
+        shared.settings = wkof.settings[ScriptId];
+        if (!window.location.href.includes("subject-lessons/picker")) {
+          wkof.Menu.insert_script_link({
+            name: ScriptId,
+            submenu: "Settings",
+            title: ScriptName,
+            on_click: openSettings,
+          });
+        }
+      });
   }
 
   function loadItems() {
@@ -153,23 +188,10 @@
     if (loc.includes("subject-lessons/picker")) {
       annotateLessonPicker();
     } else if (loc.match("vocabulary[^/]") || loc.includes("level/") || loc.includes("kanji/")) {
-      installMenu();
       annotateVocabList();
     } else if (loc.includes("vocabulary/")) {
-      installMenu();
       annotateVocabPage();
-    } else {
-      installMenu();
     }
-  }
-
-  function installMenu() {
-    wkof.Menu.insert_script_link({
-      name: "word_frequency_filter",
-      submenu: "Settings",
-      title: "Word Frequency Filter",
-      on_click: openSettings,
-    });
   }
 
   // prettier-ignore
@@ -181,8 +203,8 @@
     sources["best"] = "Best rank available";
     sources["avg"] = "Average rank";
     let config = {
-      script_id: 'word_frequency_filter',
-      title: 'Word Frequency Filter',
+      script_id: ScriptId,
+      title: ScriptName,
       on_change: postNavigate,
       content: {
         config: {
@@ -238,23 +260,23 @@
     for (const source of Sources) {
       const value = frequencyData[source.id];
       if (value) {
-        element.setAttribute("data-vp-" + source.id, roundRank(value));
+        element.setAttribute("data-wff-" + source.id, roundRank(value));
         best = Math.min(best, value);
         sum += value;
         count++;
       }
     }
     if (best < 100000) {
-      element.setAttribute("data-vp-best", roundRank(best));
+      element.setAttribute("data-wff-best", roundRank(best));
     }
     if (count > 0) {
-      element.setAttribute("data-vp-avg", roundRank(sum / count));
+      element.setAttribute("data-wff-avg", roundRank(sum / count));
     }
     return count;
   }
 
   function getFrequencyFromAttribute(target, id) {
-    return target.getAttribute("data-vp-" + id);
+    return target.getAttribute("data-wff-" + id);
   }
 
   // ====================================================================================
