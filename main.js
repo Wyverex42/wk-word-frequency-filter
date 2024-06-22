@@ -8,6 +8,7 @@
 // @match        https://www.wanikani.com/dashboard
 // @match        https://www.wanikani.com/kanji/*
 // @match        https://www.wanikani.com/level/*
+// @match        https://www.wanikani.com/search*
 // @match        https://www.wanikani.com/subject-lessons/picker
 // @match        https://www.wanikani.com/vocabulary*
 // @grant        none
@@ -185,7 +186,7 @@
     const loc = window.location.href;
     if (loc.includes("subject-lessons/picker")) {
       annotateLessonPicker();
-    } else if (loc.match("vocabulary[^/]") || loc.includes("level/") || loc.includes("kanji/")) {
+    } else if (loc.match("vocabulary[^/]") || loc.includes("level/") || loc.includes("kanji/") || loc.match("search[^/]")) {
       annotateVocabList();
     } else if (loc.includes("vocabulary/")) {
       annotateVocabPage();
