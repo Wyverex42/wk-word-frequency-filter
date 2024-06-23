@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Word Frequency Filter
 // @namespace    wyverex
-// @version      1.2.1
+// @version      1.3.0
 // @description  Shows word frequency information and reorders vocab on the lesson picker according to their frequency
 // @author       Andreas Krügersen-Clark
 // @match        https://www.wanikani.com/
@@ -170,6 +170,7 @@
     let defaults = {
       rankCutoff: 2500,
       source: "a",
+      showRankDuringReviews: false,
     };
     return wkof.Settings.load(ScriptId, defaults).then(() => {
       shared.settings = wkof.settings[ScriptId];
@@ -200,7 +201,7 @@
       } else if (loc.includes("review")) {
         annotateReview();
       } else {
-        annotateMenuBar();
+        annotateMenuBar(".lesson-container");
       }
     } else if (loc.match("vocabulary[^/]") || loc.includes("level/") || loc.includes("kanji/") || loc.match("search[^/]")) {
       annotateVocabList();
@@ -226,6 +227,7 @@
           type: "group", label: "Configuration", content: {
             source: { type: "dropdown", label: "Frequency Source", default: "i", hover_tip: "Which word frequency list to use for ranking vocabulary", content: sources },
             rankCutoff: { type: "number", label: "Rank Cutoff", default: 2500, min: 100, hover_tip: "Up to which rank of the selected source do you want to learn words?" },
+            showRankDuringReviews: { type: "checkbox", label: "Show rank during reviews", default: false, hover_tip: "If true, the word's rank is displayed in the top right corner during reviews" },
           }
         }
       }
@@ -318,8 +320,8 @@
     return div;
   }
 
-  function initTooltip(targetClass, addTooltipContent) {
-    const tooltip = createDiv(document.body.querySelector(".site-content-container"), "wff-tooltip");
+  function initTooltip(targetClass, addTooltipContent, rootClass = ".site-content-container", top = true) {
+    const tooltip = createDiv(document.body.querySelector(rootClass), "wff-tooltip");
 
     document.body.addEventListener(
       "mouseenter",
@@ -335,7 +337,11 @@
           const rect = target.getBoundingClientRect();
           const tooltipHeight = tooltip.offsetHeight;
 
-          tooltip.style.top = window.scrollY + rect.top - tooltipHeight - 10 + "px";
+          if (top) {
+            tooltip.style.top = window.scrollY + rect.top - tooltipHeight - 10 + "px";
+          } else {
+            tooltip.style.top = window.scrollY + rect.bottom + 10 + "px";
+          }
           tooltip.style.left = window.scrollX + rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + "px";
           tooltip.classList.add("wff-tooltip-visible");
         }
@@ -559,11 +565,15 @@
   }
 
   // ====================================================================================
-  function annotateMenuBar() {
+  function removeMenuBarAnnotation() {
     const oldInfo = document.querySelector(".wff-vocab-freq-box");
     if (oldInfo) {
       oldInfo.remove();
     }
+  }
+
+  function annotateMenuBar(tooltipRootName) {
+    removeMenuBarAnnotation();
 
     const vocabHeader = document.querySelector(".character-header--vocabulary");
     const menu = document.querySelector(".character-header__menu");
@@ -582,6 +592,16 @@
       if (rank) {
         const rankElement = createDiv(undefined, ["wff-vocab-freq-box", "wff-lesson-box"], "", "Rank: " + roundRank(rank));
         menu.insertBefore(rankElement, stats);
+
+        initTooltip(
+          "wff-vocab-freq-box",
+          (tooltip, target) => {
+            const getFrequency = (target, suffix) => roundRank(getRankForSource(data, suffix));
+            addRankInfos(tooltip, target, getFrequency, true);
+          },
+          tooltipRootName,
+          false
+        );
         return;
       }
     }
@@ -591,7 +611,11 @@
   }
 
   function annotateReview() {
-    window.addEventListener("willShowNextQuestion", annotateMenuBar);
-    annotateMenuBar();
+    if (shared.settings.showRankDuringReviews) {
+      window.addEventListener("willShowNextQuestion", () => annotateMenuBar(".quiz__content"));
+      annotateMenuBar(".quiz__content");
+    } else {
+      removeMenuBarAnnotation();
+    }
   }
 })(window);
