@@ -111,6 +111,15 @@
     .wff-vocab-page .wff-tooltip-rank {
       font-size: var(--font-size-xsmall);
     }
+    .wff-lesson-box {
+      margin-right: 0.5rem;
+      order: 1;
+    }
+    @media (max-width: 640px) {
+     .wff-lesson-box {
+        order: 2;
+      }
+    }
     `;
 
     document.head.appendChild(document.createElement("style")).innerHTML = content;
@@ -571,13 +580,13 @@
     if (data) {
       const rank = getRank(data);
       if (rank) {
-        const rankElement = createDiv(undefined, "wff-vocab-freq-box", "order: 1; margin-right: 0.5rem;", "Rank: " + roundRank(rank));
+        const rankElement = createDiv(undefined, ["wff-vocab-freq-box", "wff-lesson-box"], "", "Rank: " + roundRank(rank));
         menu.insertBefore(rankElement, stats);
         return;
       }
     }
 
-    const rankElement = createDiv(undefined, "wff-vocab-freq-box", "order: 1; margin-right: 0.5rem; color: #f00", "No data found");
+    const rankElement = createDiv(undefined, ["wff-vocab-freq-box", "wff-lesson-box"], "color: #f00", "No data found");
     menu.insertBefore(rankElement, stats);
   }
 
