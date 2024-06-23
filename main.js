@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Word Frequency Filter
 // @namespace    wyverex
-// @version      1.1.1
+// @version      1.2.0
 // @description  Shows word frequency information and reorders vocab on the lesson picker according to their frequency
 // @author       Andreas Krügersen-Clark
 // @match        https://www.wanikani.com/
@@ -9,7 +9,8 @@
 // @match        https://www.wanikani.com/kanji/*
 // @match        https://www.wanikani.com/level/*
 // @match        https://www.wanikani.com/search*
-// @match        https://www.wanikani.com/subject-lessons/picker
+// @match        https://www.wanikani.com/subject-lessons/*
+// @match        https://www.wanikani.com/subjects/review
 // @match        https://www.wanikani.com/vocabulary*
 // @grant        none
 // @require      https://unpkg.com/wanakana
@@ -184,8 +185,14 @@
 
   function postNavigate() {
     const loc = window.location.href;
-    if (loc.includes("subject-lessons/picker")) {
-      annotateLessonPicker();
+    if (loc.includes("subject")) {
+      if (loc.includes("picker")) {
+        annotateLessonPicker();
+      } else if (loc.includes("review")) {
+        annotateReview();
+      } else {
+        annotateMenuBar();
+      }
     } else if (loc.match("vocabulary[^/]") || loc.includes("level/") || loc.includes("kanji/") || loc.match("search[^/]")) {
       annotateVocabList();
     } else if (loc.includes("vocabulary/")) {
@@ -540,5 +547,42 @@
     });
 
     pageNav.parentElement.insertBefore(container, pageNav);
+  }
+
+  // ====================================================================================
+  function annotateMenuBar() {
+    const oldInfo = document.querySelector(".wff-vocab-freq-box");
+    if (oldInfo) {
+      oldInfo.remove();
+    }
+
+    const vocabHeader = document.querySelector(".character-header--vocabulary");
+    const menu = document.querySelector(".character-header__menu");
+    const stats = document.querySelector(".character-header__menu-statistics");
+    if (!vocabHeader || !menu || !stats) {
+      return;
+    }
+
+    const element = vocabHeader.querySelector(".character-header__characters");
+    if (!element) {
+      return;
+    }
+    const data = FrequencyData[element.innerHTML];
+    if (data) {
+      const rank = getRank(data);
+      if (rank) {
+        const rankElement = createDiv(undefined, "wff-vocab-freq-box", "order: 1; margin-right: 0.5rem;", "Rank: " + roundRank(rank));
+        menu.insertBefore(rankElement, stats);
+        return;
+      }
+    }
+
+    const rankElement = createDiv(undefined, "wff-vocab-freq-box", "order: 1; margin-right: 0.5rem; color: #f00", "No data found");
+    menu.insertBefore(rankElement, stats);
+  }
+
+  function annotateReview() {
+    window.addEventListener("willShowNextQuestion", annotateMenuBar);
+    annotateMenuBar();
   }
 })(window);
